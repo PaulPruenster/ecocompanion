@@ -1,48 +1,63 @@
-import express from 'express';
-import sqlite3 from 'sqlite3';
-import path from 'path';
+import express, { Application } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import userRoutes from './routes/userRoutes';
+import { swaggerSpec } from './config/swagger';
 
-const app = express();
-app.use(express.json());
+/**
+ * Main application entry point
+ * Configures Express server with middleware and routes
+ */
+const app: Application = express();
+const PORT = process.env.PORT || 3000;
 
-const db = new sqlite3.Database(path.join(__dirname, '..', 'database.sqlite'));
+// Middleware
+app.use(express.json()); // Parse JSON request bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL
-  )
-`);
+// Swagger Documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'EcoCompanion API Documentation',
+}));
 
-app.get('/users', (_, res) => {
-  db.all('SELECT * FROM users', (err, rows) => {
-    if (err) {
-      res.status(500).json({ error: 'Failed to retrieve users' });
-      return;
-    }
-    res.json(rows);
+// Swagger JSON
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Routes
+app.use('/api/users', userRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running' });
+});
+
+// Root endpoint with API info
+app.get('/', (req, res) => {
+  res.json({
+    message: 'EcoCompanion API',
+    version: '1.0.0',
+    documentation: `http://localhost:${PORT}/api-docs`,
+    endpoints: {
+      health: '/health',
+      users: '/api/users',
+      swagger: '/api-docs',
+      swaggerJson: '/api-docs.json',
+    },
   });
 });
 
-app.post('/users', (req, res) => {
-  const { name, email } = req.body;
-
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required' });
-  }
-
-  db.run('INSERT INTO users (name, email) VALUES (?, ?)', [name, email], function(err) {
-    if (err) {
-      if (err.message.includes('UNIQUE constraint')) {
-        res.status(400).json({ error: 'Email already exists' });
-      } else {
-        res.status(500).json({ error: 'Failed to create user' });
-      }
-      return;
-    }
-    res.status(201).json({ id: this.lastID, name, email });
-  });
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
 });
 
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📚 API Documentation available at http://localhost:${PORT}/api-docs`);
+  console.log(`📄 Swagger JSON at http://localhost:${PORT}/api-docs.json`);
+});

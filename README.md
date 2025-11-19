@@ -3,7 +3,7 @@
 > 
 > 🏆 **Award Winner:** We're proud to announce this project won the **KONVERTO Challenge 2025**!  
 > 
-> 🌐 **Porject website:** Check out our project website at:  
+> 🌐 **Project website:** Check out our project website at:  
 > **[https://www.hackathon.bz.it/project/ecocompanion](https://www.hackathon.bz.it/project/ecocompanion)**
 
 # NOI Hackaton 2025
